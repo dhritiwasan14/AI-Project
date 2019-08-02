@@ -222,7 +222,7 @@ def runloop(num_episodes):
     
         print(f"Episode {i_episode+1+EXTRA}: {np.array(torch.cat(reward_list).to('cpu').numpy())[-1]} | Average:{np.average(np.array(torch.cat(reward_list).to('cpu').numpy())[-100:])}")
         
-        if (i_episode+EXTRA+1) % 50 == 0:
+        if (i_episode+EXTRA+1) % 100 == 0: #save every X steps
             print(f"Saving Checkpoint")
             #Save CSV of data
             csvname = 'TillEp_' +str(i_episode+1+EXTRA) + '_data.csv'
@@ -255,8 +255,8 @@ SAVE_DIR = "./RAM"
 CSV_DIR = "./RAM/csv"
 MODEL_DIR = "./RAM/model"
 LOAD = True
-BESTCSV = "./RAM/csv/TillEp_110_data.csv"
-BEST = "./RAM/model/pong_110.pth.tar"
+BESTCSV = "./RAM/csv/TillEp_900_data.csv"
+BEST = "./RAM/model/pong_900.pth.tar"
 
     
 BATCH_SIZE = 128
@@ -266,7 +266,7 @@ EPS_END = 0.05
 EPS_DECAY = 200
 TARGET_UPDATE = 30#10
 LEARNING_RATE = 2e-2 # betwee 1e-4 to 1e-2
-num_episodes = 90#500
+num_episodes = 100#500
 memory = ReplayMemory(50000)
 
 input_space = env.observation_space.shape[0]#128
