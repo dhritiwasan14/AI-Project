@@ -190,8 +190,8 @@ def runloop(num_episodes):
         state = torch.from_numpy(env.reset()).float().to(device)
         episode_reward = 0
         for t in count():
-            if (i_episode+EXTRA+1) % 100 == 0:
-                env.render() ##RENDER##
+            #if (i_episode+EXTRA+1) % 100 == 0:
+                #env.render() ##RENDER##
             # Select and perform an action
             action = interpret_action(select_action(state))
             obs, reward, done, info = env.step(action.item())
@@ -237,7 +237,7 @@ def runloop(num_episodes):
             cp_model = 'pong_'+str(i_episode+1+EXTRA)+'.pth.tar'
             save_state = {
                         'steps_total' : steps_done,
-                        'epoch': i_episode+1,
+                        'epoch': i_episode+1+EXTRA,
                         'policy_state_dict': policy_net.state_dict(),
                         'target_state_dict': target_net.state_dict(),
                         'optimizer' : optimizer.state_dict(),
@@ -255,8 +255,8 @@ SAVE_DIR = "./RAM"
 CSV_DIR = "./RAM/csv"
 MODEL_DIR = "./RAM/model"
 LOAD = True
-BESTCSV = "./RAM/csv/TillEp_900_data.csv"
-BEST = "./RAM/model/pong_900.pth.tar"
+BESTCSV = "./RAM/csv/TillEp_2600_data.csv"
+BEST = "./RAM/model/pong_2600.pth.tar"
 
     
 BATCH_SIZE = 128
@@ -266,7 +266,7 @@ EPS_END = 0.05
 EPS_DECAY = 200
 TARGET_UPDATE = 30#10
 LEARNING_RATE = 2e-2 # betwee 1e-4 to 1e-2
-num_episodes = 2100#500
+num_episodes = 1400#500
 memory = ReplayMemory(50000)
 
 input_space = env.observation_space.shape[0]#128
@@ -290,6 +290,7 @@ if LOAD:
     checkpoint = torch.load(BEST)
     steps_done = checkpoint['steps_total']
     EXTRA = checkpoint['epoch']
+    print(EXTRA)
     policy_net.load_state_dict(checkpoint['policy_state_dict']) #load policy net
     target_net.load_state_dict(checkpoint['target_state_dict']) #load target net
     optimizer.load_state_dict(checkpoint['optimizer']) #load optimiser
