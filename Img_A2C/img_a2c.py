@@ -198,7 +198,7 @@ def a2c(env):
             #plt.ioff()
             #plt.show()
     
-            if ((episode+1+EXTRA) % 50 == 0):  # save every X steps
+            if ((episode+1+EXTRA) % 200 == 0):  ### save every X episodes #################
                 print(f"Saving Checkpoint")
                 #Save CSV of data
                 csvname = 'TillEp_' + str(episode+1+EXTRA) + '_data.csv'
@@ -227,8 +227,8 @@ def calc_entropy(dist):
  
 ## Parameters   
 BEST = 50    #Latest/Best Episode
-LOAD = False
-PLAY = True
+LOAD = True
+PLAY = False
 # Load: False + Play: False = Fresh Init Training
 # Load:  True + Play: False = Pretrained Training
 # Load: False + Play:  True = Untrained Game
@@ -241,7 +241,7 @@ BESTCSV = f"./csv/TillEp_{BEST}_data.csv"
 BESTMODEL = f"./model/pong_{BEST}.pth.tar" 
 
 ## Hyper-Parameters 
-MAX_EPISODES = 1#10000
+MAX_EPISODES = 950#10000
 GAMMA = 0.99
 MAX_STEPS = 1500 #per episode
 ALPHA = 0.001
