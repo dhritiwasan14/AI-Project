@@ -195,7 +195,7 @@ def a2c(env):
         #Advantage = Q (s, a) - V (s)
         advantage = Qvals - values
         actor_loss = (-log_probs * advantage).mean()
-        critic_loss = 0.5 * (advantage**2).mean()
+        critic_loss = (0.5 * advantage**2).mean()
         ac_loss = actor_loss + critic_loss + ALPHA * entropy_term
 
         optimizer.zero_grad()
