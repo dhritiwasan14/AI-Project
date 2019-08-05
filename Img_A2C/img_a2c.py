@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import time
 
-#os.chdir("D:/School Stuff/50 .021 Artificial Intelligence/Project/")
+#os.chdir("D:/School Stuff/50 .021 Artificial Intelligence/Project/Img_A2C/")
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # set up matplotlib
@@ -112,11 +112,10 @@ def a2c(env):
             env.render() ## RENDER ##
             value, prob_dist = model.forward(state)
             value = value.item()
-            dist = prob_dist.detach().to('cpu').numpy()
+            dist = prob_dist.detach().squeeze(0).to('cpu').numpy()
 
             #sample A ~ pi (.|S, theta)
-            m = Categorical(prob_dist)
-            action = m.sample()
+            action = np.random.choice(n_actions, p=dist)
 
             #Calculate ln ( pi(A|S, theta), entropy = - SUM(p(x) * ln(p(x))
             log_prob = torch.log(prob_dist.squeeze(0)[action])
@@ -146,11 +145,10 @@ def a2c(env):
                 #env.render() ## RENDER ##
                 value, prob_dist = model.forward(state)
                 value = value.item() #value.detach().to('cpu').numpy()[0, 0]
-                dist = prob_dist.detach().to('cpu').numpy()
+                dist = prob_dist.detach().squeeze(0).to('cpu').numpy()
     
                 #sample A ~ pi (.|S, theta)
-                m = Categorical(prob_dist)
-                action = m.sample()
+                action = np.random.choice(n_actions, p=dist)
     
                 #Calculate ln ( pi(A|S, theta), entropy = - SUM(p(x) * ln(p(x))
                 log_prob = torch.log(prob_dist.squeeze(0)[action])
@@ -188,7 +186,7 @@ def a2c(env):
             #Advantage = Q (s, a) - V (s)
             advantage = Qvals - values
             actor_loss = (-log_probs * advantage).mean()
-            critic_loss = (0.5 * advantage**2).mean()
+            critic_loss = 0.5 * advantage.pow(2).mean()
             ac_loss = actor_loss + critic_loss + ALPHA * entropy_term
     
             optimizer.zero_grad()
@@ -218,30 +216,52 @@ def a2c(env):
                     'optimizer': optimizer.state_dict(),
                 }
                 torch.save(save_state, os.path.join(MODEL_DIR, cp_model))
+                
+                #Save Image
+                rebuild1(CSV_DIR+csvname)
 
 def calc_entropy(dist):
     entropy = 0
-    for i in dist[0]:
+    for i in dist:
         entropy -= i * np.log(i)
     return entropy
+    
+def rebuild1(csvfile):
+    df = pd.read_csv(csvfile, header=None)
+    npdf = np.array(df).reshape(-1)
+    plt.figure(2)
+    npdf_t = torch.tensor(npdf, dtype=torch.float)
+    avg_last_100 = np.average(npdf[-100:])
+    plt.title('Average over last 100 = ' + str(avg_last_100))
+    plt.xlabel('Episode')
+    plt.ylabel('Reward')
+    plt.plot(npdf)
+    # Take 100 episode averages and plot them too
+    if len(npdf_t) >= 100:
+        means = npdf_t.unfold(0, 100, 1).mean(1).view(-1)
+        means = torch.cat((torch.zeros(99), means))
+        plt.plot(means.numpy())
+    plt.savefig(os.path.join(IMG_DIR,f'{npdf.shape[0]}.png'))
+    #plt.show()
  
 ## Parameters   
-BEST = 400    #Latest/Best Episode
+BEST = 1600    #Latest/Best Episode
 LOAD = True
-PLAY = False
+PLAY = True
 # Load: False + Play: False = Fresh Init Training
 # Load:  True + Play: False = Pretrained Training
 # Load: False + Play:  True = Untrained Game
 # Load:  True + Play:  True = Test (Trained) Game
 
 
-CSV_DIR = "./csv"                            #Folder for CSVs
-MODEL_DIR = "./model"                        #Folder for Save states
+CSV_DIR = "./csv/"                            #Folder for CSVs
+MODEL_DIR = "./model/"                        #Folder for Save states
+IMG_DIR = "./images/"                         #Folder for Graphs
 BESTCSV = f"./csv/TillEp_{BEST}_data.csv"     
 BESTMODEL = f"./model/pong_{BEST}.pth.tar" 
 
 ## Hyper-Parameters 
-MAX_EPISODES = 1600#10000
+MAX_EPISODES = 400#10000
 GAMMA = 0.99
 MAX_STEPS = 1500 #per episode
 ALPHA = 0.001
