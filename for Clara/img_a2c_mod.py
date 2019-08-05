@@ -106,7 +106,7 @@ def a2c(env):
     
  
 ## Parameters   
-BEST = 800    #Latest/Best Episode
+BEST = 4800    #Latest/Best Episode
 
 MODEL_DIR = "./model/"                        #Folder for Save states   
 BESTMODEL = f"{MODEL_DIR}pong_{BEST}.pth.tar" 
