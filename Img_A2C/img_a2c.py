@@ -62,9 +62,8 @@ class ActorCritic(nn.Module):
         # self.conv2 = nn.Conv2d(16, 32, kernel_size=5, stride=2)
         # self.bn2 = nn.BatchNorm2d(32)
         # self.conv3 = nn.Conv2d(32, 32, kernel_size=5, stride=2)
-
-
         # self.num_actions = num_actions
+        
         self.critic1 = nn.Linear(num_inputs, 100)
         self.critic2 = nn.Linear(100, 1)
 
@@ -73,10 +72,10 @@ class ActorCritic(nn.Module):
 
     def forward(self, state):
         state = Variable(torch.from_numpy(state).float().unsqueeze(0).to(device))
-        value = F.leaky_relu(self.critic1(state))
+        value = F.relu(self.critic1(state))
         value = self.critic2(value)
 
-        prob_dist = F.leaky_relu(self.actor1(state))
+        prob_dist = F.relu(self.actor1(state))
         prob_dist = F.softmax(self.actor2(prob_dist), dim=1)
 
         return value, prob_dist
@@ -172,7 +171,7 @@ def a2c(env):
                     mean_rewards.append(np.mean(ep_rewards[max(episode - 100, 0):episode + 1]))
                     steps_done += steps#steps_done = steps
                     print(f"Episode: {episode+1+EXTRA}, Reward: {np.sum(rewards)} | Mean reward: {mean_rewards[-1]}")
-                    plot_durations(ep_rewards) ## PLOT TRAINING PROGRESS
+                    #plot_durations(ep_rewards) ## PLOT TRAINING PROGRESS
                     break
     
             # Q = E [r(t+1) + GAMMA* V(s (t+1)]
@@ -189,7 +188,7 @@ def a2c(env):
             #Advantage = Q (s, a) - V (s)
             advantage = Qvals - values
             actor_loss = (-log_probs * advantage).mean()
-            critic_loss = 0.5 * (advantage**2).mean()
+            critic_loss = (0.5 * advantage**2).mean()
             ac_loss = actor_loss + critic_loss + ALPHA * entropy_term
     
             optimizer.zero_grad()
@@ -197,7 +196,8 @@ def a2c(env):
             optimizer.step()
             #plt.ioff()
             #plt.show()
-    
+            if ((episode+1+EXTRA) % 50 == 0):
+                plot_durations(ep_rewards) ##REMOVE THIS
             if ((episode+1+EXTRA) % 200 == 0):  ### save every X episodes #################
                 print(f"Saving Checkpoint")
                 #Save CSV of data
@@ -226,7 +226,7 @@ def calc_entropy(dist):
     return entropy
  
 ## Parameters   
-BEST = 50    #Latest/Best Episode
+BEST = 400    #Latest/Best Episode
 LOAD = True
 PLAY = False
 # Load: False + Play: False = Fresh Init Training
@@ -241,7 +241,7 @@ BESTCSV = f"./csv/TillEp_{BEST}_data.csv"
 BESTMODEL = f"./model/pong_{BEST}.pth.tar" 
 
 ## Hyper-Parameters 
-MAX_EPISODES = 950#10000
+MAX_EPISODES = 1600#10000
 GAMMA = 0.99
 MAX_STEPS = 1500 #per episode
 ALPHA = 0.001
