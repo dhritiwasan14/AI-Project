@@ -100,8 +100,9 @@ def a2c(env):
         EXTRA = checkpoint['epoch']
         model.load_state_dict(checkpoint['model_state_dict'])  # load model
         optimizer.load_state_dict(checkpoint['optimizer'])  # load optimiser
-        df = pd.read_csv(BESTCSV, header=None)
-        ep_rewards = np.transpose(np.array(df)).reshape(-1).tolist() #list(torch.unbind(torch.FloatTensor(np.array(df).tolist()).to(device)))
+        if PLAY == False:
+            df = pd.read_csv(BESTCSV, header=None)
+            ep_rewards = np.transpose(np.array(df)).reshape(-1).tolist() #list(torch.unbind(torch.FloatTensor(np.array(df).tolist()).to(device)))
         print(f"Loading from Episode {EXTRA}. Current steps = {steps_done}") #Load message
         
     if PLAY:
@@ -116,10 +117,6 @@ def a2c(env):
 
             #sample A ~ pi (.|S, theta)
             action = np.random.choice(n_actions, p=dist)
-
-            #Calculate ln ( pi(A|S, theta), entropy = - SUM(p(x) * ln(p(x))
-            log_prob = torch.log(prob_dist.squeeze(0)[action])
-            entropy = calc_entropy(dist)
 
             new_state, reward, done, _ = env.step(action) # next step
             new_state = prepro(new_state) #preprocess the new state
@@ -242,12 +239,13 @@ def rebuild1(csvfile):
         means = torch.cat((torch.zeros(99), means))
         plt.plot(means.numpy())
     plt.savefig(os.path.join(IMG_DIR,f'{npdf.shape[0]}.png'))
+    plt.close()
     #plt.show()
  
 ## Parameters   
-BEST = 10    #Latest/Best Episode
+BEST = 600    #Latest/Best Episode
 LOAD = True
-PLAY = False
+PLAY = True
 # Load: False + Play: False = Fresh Init Training
 # Load:  True + Play: False = Pretrained Training
 # Load: False + Play:  True = Untrained Game
@@ -261,7 +259,7 @@ BESTCSV = f"{CSV_DIR}TillEp_{BEST}_data.csv"
 BESTMODEL = f"{MODEL_DIR}pong_{BEST}.pth.tar" 
 
 ## Hyper-Parameters 
-MAX_EPISODES = 40#10000
+MAX_EPISODES = 100#10000
 GAMMA = 0.99
 MAX_STEPS = 1500 #per episode
 ALPHA = 0.001
