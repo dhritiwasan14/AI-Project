@@ -106,10 +106,10 @@ class ActorCritic(nn.Module):
 
     def forward(self, state):
         state = Variable(torch.from_numpy(state).float().unsqueeze(0))
-        value = F.leaky_relu(self.critic1(state))
+        value = F.relu(self.critic1(state))
         value = self.critic2(value)
 
-        prob_dist = F.leaky_relu(self.actor1(state))
+        prob_dist = F.relu(self.actor1(state))
         prob_dist = F.softmax(self.actor2(prob_dist), dim=1)
 
         return value, prob_dist
