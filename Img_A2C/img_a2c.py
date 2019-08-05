@@ -163,7 +163,7 @@ def a2c(env):
                     Qval, _ = model.forward(new_state)
                     Qval = Qval.item()#Qval.detach().to('cpu').numpy()[0, 0]
                     ep_rewards.append(np.sum(rewards))
-                    mean_rewards.append(np.mean(ep_rewards[max(episode - 100, 0):episode + 1]))
+                    mean_rewards.append(np.mean(ep_rewards[-100:]))
                     steps_done += steps#steps_done = steps
                     print(f"Episode: {episode+1+EXTRA}, Reward: {np.sum(rewards)} | Mean reward: {mean_rewards[-1]}")
                     #plot_durations(ep_rewards) ## PLOT TRAINING PROGRESS
@@ -243,7 +243,7 @@ def rebuild1(csvfile):
     #plt.show()
  
 ## Parameters   
-BEST = 600    #Latest/Best Episode
+BEST = 4800    #Latest/Best Episode
 LOAD = True
 PLAY = True
 # Load: False + Play: False = Fresh Init Training
