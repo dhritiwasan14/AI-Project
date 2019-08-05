@@ -154,10 +154,10 @@ def a2c(env):
             value, prob_dist = model.forward(state)
             value = value.detach().numpy()[0, 0]
             dist = prob_dist.detach().numpy()
+            dist = np.squeeze(dist)
 
             #sample A ~ pi (.|S, theta)
-            m = Categorical(prob_dist)
-            action = m.sample()
+            action = np.random.choice(n_actions, p=dist)
 
             #Calculate ln ( pi(A|S, theta), entropy = - SUM(p(x) * ln(p(x))
             log_prob = torch.log(prob_dist.squeeze(0)[action])
@@ -195,7 +195,7 @@ def a2c(env):
         #Advantage = Q (s, a) - V (s)
         advantage = Qvals - values
         actor_loss = (-log_probs * advantage).mean()
-        critic_loss = (0.5 * advantage**2).mean()
+        critic_loss = 0.5 * advantage.pow(2).mean()
         ac_loss = actor_loss + critic_loss + ALPHA * entropy_term
 
         optimizer.zero_grad()
