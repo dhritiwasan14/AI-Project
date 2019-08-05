@@ -195,8 +195,8 @@ def a2c(env):
             #plt.ioff()
             #plt.show()
             if ((episode+1+EXTRA) % 50 == 0):
-                plot_durations(ep_rewards) ##REMOVE THIS
-            if ((episode+1+EXTRA) % 200 == 0):  ### save every X episodes #################
+                plot_durations(ep_rewards) ##Show update every X episode
+            if ((episode+1+EXTRA) % 50 == 0):  ### save every X episodes #################
                 print(f"Saving Checkpoint")
                 #Save CSV of data
                 csvname = 'TillEp_' + str(episode+1+EXTRA) + '_data.csv'
@@ -245,9 +245,9 @@ def rebuild1(csvfile):
     #plt.show()
  
 ## Parameters   
-BEST = 1600    #Latest/Best Episode
+BEST = 10    #Latest/Best Episode
 LOAD = True
-PLAY = True
+PLAY = False
 # Load: False + Play: False = Fresh Init Training
 # Load:  True + Play: False = Pretrained Training
 # Load: False + Play:  True = Untrained Game
@@ -257,11 +257,11 @@ PLAY = True
 CSV_DIR = "./csv/"                            #Folder for CSVs
 MODEL_DIR = "./model/"                        #Folder for Save states
 IMG_DIR = "./images/"                         #Folder for Graphs
-BESTCSV = f"./csv/TillEp_{BEST}_data.csv"     
-BESTMODEL = f"./model/pong_{BEST}.pth.tar" 
+BESTCSV = f"{CSV_DIR}TillEp_{BEST}_data.csv"     
+BESTMODEL = f"{MODEL_DIR}pong_{BEST}.pth.tar" 
 
 ## Hyper-Parameters 
-MAX_EPISODES = 400#10000
+MAX_EPISODES = 40#10000
 GAMMA = 0.99
 MAX_STEPS = 1500 #per episode
 ALPHA = 0.001
