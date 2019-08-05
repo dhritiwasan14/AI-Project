@@ -226,7 +226,7 @@ def a2c(env):
 
 def calc_entropy(dist):
     entropy = 0
-    for i in dist[0]:
+    for i in dist:
         entropy -= i * np.log(i)
     return entropy
 
