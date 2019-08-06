@@ -204,7 +204,7 @@ def a2c(env):
                     Qval, _ = model.forward(new_state)
                     Qval = Qval.detach().numpy()[0, 0]
                     ep_rewards.append(np.sum(rewards))
-                    mean_rewards.append(np.mean(ep_rewards[max(episode - 100, 0):episode + 1]))
+                    mean_rewards.append(np.mean(ep_rewards[-100:]))
                     steps_done = steps
                     print("episode: {}, reward: {}, mean reward: {} \n".format(episode + 1 + EXTRA,np.sum(rewards), mean_rewards[-1]))
                     plot_durations(ep_rewards)
