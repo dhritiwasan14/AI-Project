@@ -141,7 +141,7 @@ def a2c(env):
             for steps in range(MAX_STEPS):
                 #env.render() ## RENDER ##
                 value, prob_dist = model.forward(state)
-                value = value.item() #value.detach().to('cpu').numpy()[0, 0]
+                #value = value.item() #value.detach().to('cpu').numpy()[0, 0]
                 dist = prob_dist.detach().squeeze(0).to('cpu').numpy()
     
                 #sample A ~ pi (.|S, theta)
@@ -154,7 +154,7 @@ def a2c(env):
                 new_state, reward, done, _ = env.step(action) # next step
                 new_state = prepro(new_state) #preprocess the new state
                 rewards.append(reward)
-                values.append(value)
+                values.append(value.squeeze(0))
                 log_probs.append(log_prob)
                 entropy_term += entropy
                 state = new_state
@@ -170,20 +170,21 @@ def a2c(env):
                     break
     
             # Q = E [r(t+1) + GAMMA* V(s (t+1)]
-            Qvals = np.zeros_like(values)
+            Qvals = np.zeros_like(rewards)#(values)
             for t in reversed(range(len(rewards))):
                 Qval = rewards[t] + GAMMA * Qval
                 Qvals[t] = Qval
     
             # update actor critic
-            values = torch.FloatTensor(values).to(device)
+            values = torch.cat(values)#torch.FloatTensor(values).to(device)
             Qvals = torch.FloatTensor(Qvals).to(device)
             log_probs = torch.stack(log_probs)
     
             #Advantage = Q (s, a) - V (s)
-            advantage = Qvals - values
+            advantage = Qvals - values.detach()
             actor_loss = (-log_probs * advantage).mean()
-            critic_loss = 0.5 * advantage.pow(2).mean()
+            critic_loss = F.smooth_l1_loss(Qvals, values) #0.5 * advantage.pow(2).mean()
+                
             ac_loss = actor_loss + critic_loss - ALPHA * entropy_term
     
             optimizer.zero_grad()
@@ -245,7 +246,7 @@ def rebuild1(csvfile):
     #plt.show()
  
 ## Parameters   
-BEST = 400    #Latest/Best Episode
+BEST = 600    #Latest/Best Episode
 LOAD = True
 PLAY = False
 # Load: False + Play: False = Fresh Init Training
@@ -261,10 +262,10 @@ BESTCSV = f"{CSV_DIR}TillEp_{BEST}_data.csv"
 BESTMODEL = f"{MODEL_DIR}pong_{BEST}.pth.tar" 
 
 ## Hyper-Parameters 
-MAX_EPISODES = 4600#10000
+MAX_EPISODES = 5000#10000
 GAMMA = 0.99
-MAX_STEPS = 1500 #per episode
-ALPHA = 0.01
+MAX_STEPS = int(2e7) #per episode
+ALPHA = 0.001
 LEARNING_RATE = 7e-4 #for adam optimiser, default 1e-3
 
 
