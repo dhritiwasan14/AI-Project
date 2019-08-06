@@ -136,7 +136,7 @@ def a2c(env):
         checkpoint = torch.load(BEST)
         steps_done = checkpoint['steps_total']
         EXTRA = checkpoint['epoch']
-        model.load_state_dict(checkpoint['policy_state_dict'])  # load model
+        model.load_state_dict(checkpoint['model_state_dict'])  # load model
         optimizer.load_state_dict(checkpoint['optimizer'])  # load optimiser
         df = pd.read_csv(BESTCSV, header=None)
         ep_rewards = list(torch.unbind(torch.FloatTensor(np.array(df).tolist()).to(device)))
