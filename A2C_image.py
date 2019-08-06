@@ -74,7 +74,7 @@ class ActorCritic1(nn.Module):
         self.actor3 = nn.Linear(100, num_actions)
 
     def forward(self, state):
-        state = Variable(torch.from_numpy(state).float().unsqueeze(0))
+        state = Variable(torch.from_numpy(state).float().unsqueeze(0).to(device))
         value = F.leaky_relu(self.critic1(state))
         value = F.leaky_relu(self.critic2(value))
         value = self.critic3(value)
@@ -116,7 +116,7 @@ class ActorCritic(nn.Module):
 
 MAX_EPISODES = 10000
 GAMMA = 0.99
-MAX_STEPS = 5000
+MAX_STEPS = 1000000
 ALPHA = 0.001
 
 def a2c(env):
@@ -124,7 +124,7 @@ def a2c(env):
     n_inputs = 6400
     n_actions = env.action_space.n
 
-    model = ActorCritic(n_inputs, n_actions)
+    model = ActorCritic(n_inputs, n_actions).to(device)
     optimizer = optim.Adam(model.parameters())
 
     ep_rewards = []
@@ -136,93 +136,122 @@ def a2c(env):
         checkpoint = torch.load(BEST)
         steps_done = checkpoint['steps_total']
         EXTRA = checkpoint['epoch']
-        model.load_state_dict(checkpoint['policy_state_dict'])  # load model
+        model.load_state_dict(checkpoint['model_state_dict'])  # load model
         optimizer.load_state_dict(checkpoint['optimizer'])  # load optimiser
         df = pd.read_csv(BESTCSV, header=None)
         ep_rewards = list(torch.unbind(torch.FloatTensor(np.array(df).tolist()).to(device)))
+        if PLAY == False:
+            df = pd.read_csv(BESTCSV, header=None)
+            ep_rewards = np.transpose(np.array(df)).reshape(-1).tolist() #list(torch.unbind(torch.FloatTensor(np.array(df).tolist()).to(device)))
+        print(f"Loading from Episode {EXTRA}. Current steps = {steps_done}") #Load message
 
-    for episode in range(MAX_EPISODES):
-        log_probs = []
-        values = []
+    if PLAY:
+        print(f"Playing 1 game of Pong, with model trained for {steps_done} steps ({EXTRA} episodes).")
         rewards = []
-
-        state = env.reset()
-        state = prepro(state)
-        steps_done = 0
-
-        for steps in range(MAX_STEPS):
+        state = prepro(env.reset())
+        for steps in count():
+            env.render()  ## RENDER ##
             value, prob_dist = model.forward(state)
-            value = value.detach().numpy()[0, 0]
-            dist = prob_dist.detach().numpy()
-            dist = np.squeeze(dist)
+            value = value.item()
+            dist = prob_dist.detach().squeeze(0).to('cpu').numpy()
 
-            #sample A ~ pi (.|S, theta)
+            # sample A ~ pi (.|S, theta)
             action = np.random.choice(n_actions, p=dist)
 
-            #Calculate ln ( pi(A|S, theta), entropy = - SUM(p(x) * ln(p(x))
-            log_prob = torch.log(prob_dist.squeeze(0)[action])
-            entropy = calc_entropy(dist)
-
-            new_state, reward, done, _ = env.step(action)
-            new_state = prepro(new_state)
+            new_state, reward, done, _ = env.step(action)  # next step
+            new_state = prepro(new_state)  # preprocess the new state
             rewards.append(reward)
-            values.append(value)
-            log_probs.append(log_prob)
-            entropy_term += entropy
             state = new_state
 
-            if done or steps == MAX_STEPS - 1:
-                Qval, _ = model.forward(new_state)
-                Qval = Qval.detach().numpy()[0, 0]
-                ep_rewards.append(np.sum(rewards))
-                mean_rewards.append(np.mean(ep_rewards[max(episode - 100, 0):episode + 1]))
-                steps_done = steps
-                print("episode: {}, reward: {}, mean reward: {} \n".format(episode,np.sum(rewards), mean_rewards[-1]))
-                #plot_durations(ep_rewards)
+            if done:
+                print(f"Game ended in {steps} steps, Reward: {np.sum(rewards)}")
                 break
 
-        # Q = E [r(t+1) + GAMMA* V(s (t+1)]
-        Qvals = np.zeros_like(values)
-        for t in reversed(range(len(rewards))):
-            Qval = rewards[t] + GAMMA * Qval
-            Qvals[t] = Qval
+    else:
+        print(f"Running Pong for {MAX_EPISODES}. Starting from Episode {EXTRA}")  # declare start
 
-        # update actor critic
-        values = torch.FloatTensor(values)
-        Qvals = torch.FloatTensor(Qvals)
-        log_probs = torch.stack(log_probs)
+        for episode in range(MAX_EPISODES):
+            log_probs = []
+            values = []
+            rewards = []
 
-        #Advantage = Q (s, a) - V (s)
-        advantage = Qvals - values
-        actor_loss = adv_actor_loss(log_probs, advantage)
-        critic_loss = 0.5 * advantage.pow(2).mean()
-        ac_loss = actor_loss + critic_loss + ALPHA * entropy_term
+            state = env.reset()
+            state = prepro(state)
+            steps_done = 0
 
-        optimizer.zero_grad()
-        ac_loss.backward()
-        optimizer.step()
-        plt.ioff()
-        plt.show()
+            for steps in range(MAX_STEPS):
+                value, prob_dist = model.forward(state)
+                value = value.detach().numpy()[0, 0]
+                dist = prob_dist.detach().numpy()
+                dist = np.squeeze(dist)
 
-        if ((episode+1) % 100 == 0):  # save every X steps
-            print(f"Saving Checkpoint")
-            #Save CSV of data
-            csvname = 'TillEp_' + str(episode + 1) + '_data.csv'
-            np.savetxt(os.path.join(CSV_DIR, csvname), ep_rewards, delimiter=',')
+                #sample A ~ pi (.|S, theta)
+                action = np.random.choice(n_actions, p=dist)
 
-            # Output Result on Screen
-            avg_last_100 = np.average(np.array(torch.cat(ep_rewards).to('cpu').numpy())[-100:])
-            print(f"Average over last 100 = {avg_last_100}")
+                #Calculate ln ( pi(A|S, theta), entropy = - SUM(p(x) * ln(p(x))
+                log_prob = torch.log(prob_dist.squeeze(0)[action])
+                entropy = calc_entropy(dist)
 
-            # Save model
-            cp_model = 'pong_' + str(episode) + '.pth.tar'
-            save_state = {
-                'steps_total': steps_done,
-                'epoch': episode + 1,
-                'model_state_dict': model.state_dict(),
-                'optimizer': optimizer.state_dict(),
-            }
-            torch.save(save_state, os.path.join(MODEL_DIR, cp_model))
+                new_state, reward, done, _ = env.step(action)
+                new_state = prepro(new_state)
+                rewards.append(reward)
+                values.append(value)
+                log_probs.append(log_prob)
+                entropy_term += entropy
+                state = new_state
+
+                if done or steps == MAX_STEPS - 1:
+                    Qval, _ = model.forward(new_state)
+                    Qval = Qval.detach().numpy()[0, 0]
+                    ep_rewards.append(np.sum(rewards))
+                    mean_rewards.append(np.mean(ep_rewards[-100:]))
+                    steps_done = steps
+                    print("episode: {}, reward: {}, mean reward: {} \n".format(episode + 1 + EXTRA,np.sum(rewards), mean_rewards[-1]))
+                    plot_durations(ep_rewards)
+                    break
+
+            # Q = E [r(t+1) + GAMMA* V(s (t+1)]
+            Qvals = np.zeros_like(values)
+            for t in reversed(range(len(rewards))):
+                Qval = rewards[t] + GAMMA * Qval
+                Qvals[t] = Qval
+
+            # update actor critic
+            values = torch.FloatTensor(values).to(device)
+            Qvals = torch.FloatTensor(Qvals).to(device)
+            log_probs = torch.stack(log_probs)
+
+            #Advantage = Q (s, a) - V (s)
+            advantage = Qvals - values
+            actor_loss = adv_actor_loss(log_probs, advantage)
+            critic_loss = 0.5 * advantage.pow(2).mean()
+            ac_loss = actor_loss + critic_loss + ALPHA * entropy_term
+
+            optimizer.zero_grad()
+            ac_loss.backward()
+            optimizer.step()
+            plt.ioff()
+            plt.show()
+
+            if ((episode+1) % 100 == 0):  # save every X steps
+                print(f"Saving Checkpoint")
+                #Save CSV of data
+                csvname = 'TillEp_' + str(episode + 1) + '_data.csv'
+                np.savetxt(os.path.join(CSV_DIR, csvname), ep_rewards, delimiter=',')
+
+                # Output Result on Screen
+                avg_last_100 = np.average(np.array(torch.cat(ep_rewards).to('cpu').numpy())[-100:])
+                print(f"Average over last 100 = {avg_last_100}")
+
+                # Save model
+                cp_model = 'pong_' + str(episode) + '.pth.tar'
+                save_state = {
+                    'steps_total': steps_done,
+                    'epoch': episode + 1,
+                    'model_state_dict': model.state_dict(),
+                    'optimizer': optimizer.state_dict(),
+                }
+                torch.save(save_state, os.path.join(MODEL_DIR, cp_model))
 
 def calc_entropy(dist):
     entropy = 0
