@@ -116,7 +116,7 @@ class ActorCritic(nn.Module):
 
 MAX_EPISODES = 10000
 GAMMA = 0.99
-MAX_STEPS = 1500
+MAX_STEPS = 5000
 ALPHA = 0.001
 
 def a2c(env):
@@ -194,7 +194,7 @@ def a2c(env):
 
         #Advantage = Q (s, a) - V (s)
         advantage = Qvals - values
-        actor_loss = (-log_probs * advantage).mean()
+        actor_loss = adv_actor_loss(log_probs, advantage)
         critic_loss = 0.5 * advantage.pow(2).mean()
         ac_loss = actor_loss + critic_loss + ALPHA * entropy_term
 
@@ -230,6 +230,14 @@ def calc_entropy(dist):
         entropy -= i * np.log(i)
     return entropy
 
+def adv_actor_loss(log_probs, advantage):
+    return (-log_probs * advantage).mean()
+
+def Q_actor_loss(log_probs, Qvals):
+    return (-log_probs * Qvals).mean()
+
+def TD_loss(log_probs, delta):
+    return (-log_probs * delta).mean()
 
 if __name__ == "__main__":
     env = gym.make("Pong-v0")
