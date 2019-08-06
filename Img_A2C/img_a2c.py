@@ -184,16 +184,16 @@ def a2c(env):
             advantage = Qvals - values
             actor_loss = (-log_probs * advantage).mean()
             critic_loss = 0.5 * advantage.pow(2).mean()
-            ac_loss = actor_loss + critic_loss + ALPHA * entropy_term
+            ac_loss = actor_loss + critic_loss - ALPHA * entropy_term
     
             optimizer.zero_grad()
             ac_loss.backward()
             optimizer.step()
             #plt.ioff()
             #plt.show()
-            if ((episode+1+EXTRA) % 50 == 0):
+            if ((episode+1+EXTRA) % 50 == 0 & (episode+1+EXTRA) % 200 != 0):
                 plot_durations(ep_rewards) ##Show update every X episode
-            if ((episode+1+EXTRA) % 50 == 0):  ### save every X episodes #################
+            if ((episode+1+EXTRA) % 200 == 0):  ### save every X episodes #################
                 print(f"Saving Checkpoint")
                 #Save CSV of data
                 csvname = 'TillEp_' + str(episode+1+EXTRA) + '_data.csv'
@@ -216,6 +216,7 @@ def a2c(env):
                 
                 #Save Image
                 rebuild1(CSV_DIR+csvname)
+                plot_durations(ep_rewards)
 
 def calc_entropy(dist):
     entropy = 0
@@ -224,6 +225,7 @@ def calc_entropy(dist):
     return entropy
     
 def rebuild1(csvfile):
+    plt.close()
     df = pd.read_csv(csvfile, header=None)
     npdf = np.array(df).reshape(-1)
     plt.figure(2)
@@ -243,9 +245,9 @@ def rebuild1(csvfile):
     #plt.show()
  
 ## Parameters   
-BEST = 4800    #Latest/Best Episode
+BEST = 400    #Latest/Best Episode
 LOAD = True
-PLAY = True
+PLAY = False
 # Load: False + Play: False = Fresh Init Training
 # Load:  True + Play: False = Pretrained Training
 # Load: False + Play:  True = Untrained Game
@@ -259,17 +261,16 @@ BESTCSV = f"{CSV_DIR}TillEp_{BEST}_data.csv"
 BESTMODEL = f"{MODEL_DIR}pong_{BEST}.pth.tar" 
 
 ## Hyper-Parameters 
-MAX_EPISODES = 100#10000
+MAX_EPISODES = 4600#10000
 GAMMA = 0.99
 MAX_STEPS = 1500 #per episode
-ALPHA = 0.001
-LEARNING_RATE = 0.001 #for adam optimiser, default 1e-3
+ALPHA = 0.01
+LEARNING_RATE = 7e-4 #for adam optimiser, default 1e-3
 
 
 if __name__ == "__main__":
     start_time = time.time()
     env = gym.make("Pong-v0")
-    #print(env.unwrapped.get_action_meanings())
     a2c(env)
     env.close()
     print(f"This run of {MAX_EPISODES} episodes took {round((time.time() -  start_time)/60,2)} minutes.")
