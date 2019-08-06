@@ -10,13 +10,17 @@ from torch.distributions import Categorical
 import matplotlib.pyplot as plt
 import pandas as pd
 
+from google.colab import drive
+drive.mount('/content/gdrive')
+
 EXTRA = 0
 SAVE_DIR = ""
-CSV_DIR = ""
-MODEL_DIR = ""
-LOAD = False
-BESTCSV = ""
-BEST = ""
+CSV_DIR = "/content/gdrive/My Drive/AI_Project/MODEL"
+MODEL_DIR = "/content/gdrive/My Drive/AI_Project/CSV"
+LOAD = True
+BESTCSV = "/content/gdrive/My Drive/AI_Project/MODEL/TillEp_1900_data.csv"
+BEST = "/content/gdrive/My Drive/AI_Project/CSV/pong_1899.pth.tar"
+PLAY = False
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -181,9 +185,10 @@ def a2c(env):
 
             for steps in range(MAX_STEPS):
                 value, prob_dist = model.forward(state)
+                value = value.item()
                 value = value.detach().numpy()[0, 0]
-                dist = prob_dist.detach().numpy()
-                dist = np.squeeze(dist)
+                dist = prob_dist.detach().squeeze(0).to("cpu").numpy()
+                # dist = np.squeeze(dist)
 
                 #sample A ~ pi (.|S, theta)
                 action = np.random.choice(n_actions, p=dist)
