@@ -56,13 +56,6 @@ def prepro(I):
 class ActorCritic(nn.Module):
     def __init__(self, num_inputs, num_actions):
         super(ActorCritic, self).__init__()
-        # self.conv1 = nn.Conv2d((80, 80),16, kernel_size = 5, stride = 2)
-        # self.conv1 = nn.Conv2d(3, 16, kernel_size=5, stride=2)
-        # self.bn1 = nn.BatchNorm2d(16)
-        # self.conv2 = nn.Conv2d(16, 32, kernel_size=5, stride=2)
-        # self.bn2 = nn.BatchNorm2d(32)
-        # self.conv3 = nn.Conv2d(32, 32, kernel_size=5, stride=2)
-        # self.num_actions = num_actions
         
         self.critic1 = nn.Linear(num_inputs, 100)
         self.critic2 = nn.Linear(100, 1)
@@ -134,6 +127,7 @@ def a2c(env):
             log_probs = []
             values = []
             rewards = []
+            entropy_term = 0 #reset entropy
             
             state = prepro(env.reset()) #preprocess the state
             #steps_done = 0 # i want to get the total total steps completed
@@ -149,7 +143,8 @@ def a2c(env):
     
                 #Calculate ln ( pi(A|S, theta), entropy = - SUM(p(x) * ln(p(x))
                 log_prob = torch.log(prob_dist.squeeze(0)[action])
-                entropy = calc_entropy(dist)
+                #entropy = calc_entropy(dist)
+                entropy = -sum((prob_dist * torch.log(prob_dist)).squeeze(0)) #propogates gradients
     
                 new_state, reward, done, _ = env.step(action) # next step
                 new_state = prepro(new_state) #preprocess the new state
@@ -194,7 +189,7 @@ def a2c(env):
             #plt.show()
             if ((episode+1+EXTRA) % 50 == 0 & (episode+1+EXTRA) % 200 != 0):
                 plot_durations(ep_rewards) ##Show update every X episode
-            if ((episode+1+EXTRA) % 200 == 0):  ### save every X episodes #################
+            if ((episode+1+EXTRA) % 10 == 0):  ### save every X episodes #################
                 print(f"Saving Checkpoint")
                 #Save CSV of data
                 csvname = 'TillEp_' + str(episode+1+EXTRA) + '_data.csv'
@@ -246,7 +241,7 @@ def rebuild1(csvfile):
     #plt.show()
  
 ## Parameters   
-BEST = 600    #Latest/Best Episode
+BEST = 10    #Latest/Best Episode
 LOAD = True
 PLAY = False
 # Load: False + Play: False = Fresh Init Training
@@ -266,7 +261,7 @@ MAX_EPISODES = 5000#10000
 GAMMA = 0.99
 MAX_STEPS = int(2e7) #per episode
 ALPHA = 0.001
-LEARNING_RATE = 7e-4 #for adam optimiser, default 1e-3
+LEARNING_RATE = 1e-3 #7e-4 #for adam optimiser, default 1e-3
 
 
 if __name__ == "__main__":
