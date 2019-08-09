@@ -1,4 +1,5 @@
 import gym
+from gym import wrappers
 import numpy as np
 import os
 from torch.autograd import Variable
@@ -13,7 +14,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import time
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cpu")
 
 # set up matplotlib
 is_ipython = 'inline' in matplotlib.get_backend()
@@ -78,7 +79,7 @@ def a2c(env):
 
     model = ActorCritic(n_inputs, n_actions).to(device)   #define NN
 
-    checkpoint = torch.load(BESTMODEL) # Load Model from checkpoint
+    checkpoint = torch.load(BESTMODEL, map_location='cpu') # Load Model from checkpoint
     steps_done = checkpoint['steps_total'] 
     EXTRA = checkpoint['epoch']
     model.load_state_dict(checkpoint['model_state_dict'])  # load model
@@ -115,6 +116,12 @@ BESTMODEL = f"{MODEL_DIR}pong_{BEST}.pth.tar"
 if __name__ == "__main__":
     env = gym.make("Pong-v0")
     a2c(env)
+
+    #RENDER VIDEO
+    env_to_wrap = wrappers.Monitor(env, '.', force = True)
+    observation = env_to_wrap.reset()
+
+    env_to_wrap.close()
     env.close()
     
     
