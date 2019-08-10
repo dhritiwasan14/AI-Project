@@ -12,6 +12,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import pandas as pd
 import time
+import wrappers
 
 #os.chdir("D:/School Stuff/50 .021 Artificial Intelligence/Project/Img_A2C/")
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -57,24 +58,41 @@ class ActorCritic(nn.Module):
     def __init__(self, num_inputs, num_actions):
         super(ActorCritic, self).__init__()
         
-        self.critic1 = nn.Linear(num_inputs, 100)
-        self.critic2 = nn.Linear(100, 1)
+        self.conv = nn.Sequential(
+            nn.Conv2d(num_inputs[0], 32, kernel_size=8, stride=4),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, kernel_size=4, stride=2),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, kernel_size=3, stride=1),
+            nn.ReLU()
+        )
 
-        self.actor1 = nn.Linear(num_inputs, 100)
-        self.actor2 = nn.Linear(100, num_actions)
+        conv_out_size = self._get_conv_out(num_inputs)
+        
+        self.fc = nn.Sequential(
+            nn.Linear(conv_out_size, 512),
+            nn.ReLU()
+        )
+        
+        self.actor = nn.Linear(512, num_actions)
+        self.critic = nn.Linear(512, 1)
+
+    def _get_conv_out(self, shape):
+        o = self.conv(torch.zeros(1, *shape))
+        return int(np.prod(o.size()))
 
     def forward(self, state):
         state = Variable(torch.from_numpy(state).float().unsqueeze(0).to(device))
-        value = F.relu(self.critic1(state))
-        value = self.critic2(value)
-
-        prob_dist = F.relu(self.actor1(state))
-        prob_dist = F.softmax(self.actor2(prob_dist), dim=1)
-
+        conv_out = self.conv(state).view(state.size()[0], -1)
+        
+        common = self.fc(conv_out)
+        value = self.critic(common)
+        prob_dist = F.softmax(self.actor(common), dim=1)
+        
         return value, prob_dist
 
 def a2c(env):
-    n_inputs = 6400 #input space
+    n_inputs = env.observation_space.shape #6400 #input space
     n_actions = env.action_space.n  #output space
 
     model = ActorCritic(n_inputs, n_actions).to(device)   #define NN
@@ -127,9 +145,9 @@ def a2c(env):
             log_probs = []
             values = []
             rewards = []
-            entropy_term = 0 #reset entropy
+            entropies = [] #reset entropy
             
-            state = prepro(env.reset()) #preprocess the state
+            state = env.reset() #state = prepro(env.reset()) #preprocess the state
             #steps_done = 0 # i want to get the total total steps completed
     
             for steps in range(MAX_STEPS):
@@ -144,14 +162,14 @@ def a2c(env):
                 #Calculate ln ( pi(A|S, theta), entropy = - SUM(p(x) * ln(p(x))
                 log_prob = torch.log(prob_dist.squeeze(0)[action])
                 #entropy = calc_entropy(dist)
-                entropy = -sum((prob_dist * torch.log(prob_dist)).squeeze(0)) #propogates gradients
+                entropy = -sum((prob_dist * torch.log(prob_dist)).squeeze(0)).unsqueeze(0) #propogates gradients
     
                 new_state, reward, done, _ = env.step(action) # next step
-                new_state = prepro(new_state) #preprocess the new state
+                #new_state = prepro(new_state) #preprocess the new state
                 rewards.append(reward)
                 values.append(value.squeeze(0))
                 log_probs.append(log_prob)
-                entropy_term += entropy
+                entropies.append(entropy)
                 state = new_state
     
                 if done or steps == MAX_STEPS - 1:
@@ -174,21 +192,23 @@ def a2c(env):
             values = torch.cat(values)#torch.FloatTensor(values).to(device)
             Qvals = torch.FloatTensor(Qvals).to(device)
             log_probs = torch.stack(log_probs)
+            entropies = torch.cat(entropies)
     
             #Advantage = Q (s, a) - V (s)
-            advantage = Qvals - values.detach()
-            actor_loss = (-log_probs * advantage).mean()
-            critic_loss = F.smooth_l1_loss(Qvals, values) #0.5 * advantage.pow(2).mean()
+            advantage = Qvals - values
+            actor_loss = (-log_probs * advantage.detach()).mean()
+            critic_loss = 0.5 * advantage.pow(2).mean() #F.smooth_l1_loss(Qvals, values) #
+            entropy_loss = entropies.mean()
                 
-            ac_loss = actor_loss + critic_loss - ALPHA * entropy_term
+            ac_loss = actor_loss + critic_loss - ALPHA * entropy_loss
     
             optimizer.zero_grad()
             ac_loss.backward()
             optimizer.step()
             #plt.ioff()
             #plt.show()
-            if ((episode+1+EXTRA) % 50 == 0 & (episode+1+EXTRA) % 200 != 0):
-                plot_durations(ep_rewards) ##Show update every X episode
+            #if ((episode+1+EXTRA) % 50 == 0 & (episode+1+EXTRA) % 200 != 0):
+                #plot_durations(ep_rewards) ##Show update every X episode
             if ((episode+1+EXTRA) % 10 == 0):  ### save every X episodes #################
                 print(f"Saving Checkpoint")
                 #Save CSV of data
@@ -212,7 +232,7 @@ def a2c(env):
                 
                 #Save Image
                 rebuild1(CSV_DIR+csvname)
-                plot_durations(ep_rewards)
+                #plot_durations(ep_rewards)
 
 def calc_entropy(dist):
     entropy = 0
@@ -242,7 +262,7 @@ def rebuild1(csvfile):
  
 ## Parameters   
 BEST = 10    #Latest/Best Episode
-LOAD = True
+LOAD = False
 PLAY = False
 # Load: False + Play: False = Fresh Init Training
 # Load:  True + Play: False = Pretrained Training
@@ -250,23 +270,24 @@ PLAY = False
 # Load:  True + Play:  True = Test (Trained) Game
 
 
-CSV_DIR = "./csv/"                            #Folder for CSVs
-MODEL_DIR = "./model/"                        #Folder for Save states
-IMG_DIR = "./images/"                         #Folder for Graphs
+CSV_DIR = "./try_8/csv/"                            #Folder for CSVs
+MODEL_DIR = "./try_8/model/"                        #Folder for Save states
+IMG_DIR = "./try_8/images/"                         #Folder for Graphs
 BESTCSV = f"{CSV_DIR}TillEp_{BEST}_data.csv"     
 BESTMODEL = f"{MODEL_DIR}pong_{BEST}.pth.tar" 
 
 ## Hyper-Parameters 
-MAX_EPISODES = 5000#10000
+MAX_EPISODES = 10#10000
 GAMMA = 0.99
 MAX_STEPS = int(2e7) #per episode
-ALPHA = 0.001
+ALPHA = 0.01
 LEARNING_RATE = 1e-3 #7e-4 #for adam optimiser, default 1e-3
 
 
 if __name__ == "__main__":
     start_time = time.time()
-    env = gym.make("Pong-v0")
+    #env = gym.make("PongNoFrameskip-v4")
+    env = wrappers.make_env("PongNoFrameskip-v4")
     a2c(env)
     env.close()
     print(f"This run of {MAX_EPISODES} episodes took {round((time.time() -  start_time)/60,2)} minutes.")
