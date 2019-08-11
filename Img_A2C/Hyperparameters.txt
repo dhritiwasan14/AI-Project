@@ -25,7 +25,7 @@ __________05600 - 00000__________
 **************TRY 5**************  >Collab 1
 >propagated critic loss (used huber)
 >reset entropy every episode
-__________00000 - 10000__________
+__________00000 - 11600__________
 GAMMA = 0.99
 MAX_STEPS = 2e7
 ALPHA = 0.001
@@ -42,14 +42,14 @@ MAX_STEPS = 2e7
 ALPHA = 0.01
 LEARNING_RATE = 1e-3
 
-**************TRY 7**************  >Collab 2
+**************TRY 7**************  
 >propagated critic loss (used huber)
 >reset entropy every episode
 >propagate entropy
 >PongNoFrameskip-v4
 >changed NN****
 
-__________00000 - 05000__________
+__________00000 - Terminated__________
 GAMMA = 0.99
 MAX_STEPS = 2e7
 ALPHA = 0.01
