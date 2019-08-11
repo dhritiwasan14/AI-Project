@@ -237,7 +237,7 @@ def rebuild1(csvfile):
     #plt.show()
  
 ## Parameters   
-BEST = 6600    #Latest/Best Episode
+BEST = 7000    #Latest/Best Episode
 LOAD = True
 PLAY = False
 # Load: False + Play: False = Fresh Init Training
