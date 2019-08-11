@@ -58,6 +58,8 @@ def baseline(model):
     prev_input = None
     
     for steps in range(MAX_STEPS):
+      if episode == MAX_EPISODES-1:
+        env.render()
       # preprocess the observation, set input as difference between images
       cur_input = observation
       x = cur_input - prev_input if prev_input is not None else np.zeros(128)
@@ -65,6 +67,7 @@ def baseline(model):
       
       # forward the policy network and sample action according to the proba distribution
       proba = model.predict(np.expand_dims(x, axis=1).T)
+      proba = 0.5
       action = UP_ACTION if np.random.uniform() < proba else DOWN_ACTION
       y = 1 if action == 2 else 0 # 0 and 1 are our labels
   
@@ -99,6 +102,7 @@ def baseline(model):
         
         #Save Image
         rebuild1(CSV_DIR+csvname)
+  env.close()
 
 def rebuild1(csvfile):
     plt.close()
@@ -138,9 +142,10 @@ IMG_DIR = "./images/"                         #Folder for Graphs
 ## Hyperparameters
 gamma = 0.99
 MAX_STEPS = int(2e7)
-MAX_EPISODES = 400
+MAX_EPISODES = 600
 
 baseline(model)
+
 
 
 
