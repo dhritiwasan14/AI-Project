@@ -1,6 +1,15 @@
+#VBS Settings
+.vscode
+
+#Cache
+__pycache__
+
+#Files to ignore
 Img_A2C/images
 Img_A2C/csv
 Img_A2C/model
-Img_A2C/Hyperparameters.txt
-Img_A2C/try_2
-Img_A2C/try_3
+Img_A2C/lib
+Img_A2C/try_1
+Img_A2C/try_4
+
+.gitignore

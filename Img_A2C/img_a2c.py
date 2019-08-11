@@ -56,13 +56,6 @@ def prepro(I):
 class ActorCritic(nn.Module):
     def __init__(self, num_inputs, num_actions):
         super(ActorCritic, self).__init__()
-        # self.conv1 = nn.Conv2d((80, 80),16, kernel_size = 5, stride = 2)
-        # self.conv1 = nn.Conv2d(3, 16, kernel_size=5, stride=2)
-        # self.bn1 = nn.BatchNorm2d(16)
-        # self.conv2 = nn.Conv2d(16, 32, kernel_size=5, stride=2)
-        # self.bn2 = nn.BatchNorm2d(32)
-        # self.conv3 = nn.Conv2d(32, 32, kernel_size=5, stride=2)
-        # self.num_actions = num_actions
         
         self.critic1 = nn.Linear(num_inputs, 100)
         self.critic2 = nn.Linear(100, 1)
@@ -94,7 +87,6 @@ def a2c(env):
     steps_done = 0
 
     if LOAD:
-        # policy_net.load_state_dict(torch.load(BESTMODEL))
         checkpoint = torch.load(BESTMODEL)
         steps_done = checkpoint['steps_total'] 
         EXTRA = checkpoint['epoch']
@@ -134,14 +126,12 @@ def a2c(env):
             log_probs = []
             values = []
             rewards = []
+            entropies = [] #reset entropy
             
             state = prepro(env.reset()) #preprocess the state
-            #steps_done = 0 # i want to get the total total steps completed
     
             for steps in range(MAX_STEPS):
-                #env.render() ## RENDER ##
                 value, prob_dist = model.forward(state)
-                #value = value.item() #value.detach().to('cpu').numpy()[0, 0]
                 dist = prob_dist.detach().squeeze(0).to('cpu').numpy()
     
                 #sample A ~ pi (.|S, theta)
@@ -149,14 +139,14 @@ def a2c(env):
     
                 #Calculate ln ( pi(A|S, theta), entropy = - SUM(p(x) * ln(p(x))
                 log_prob = torch.log(prob_dist.squeeze(0)[action])
-                entropy = calc_entropy(dist)
+                entropy = -sum((prob_dist * torch.log(prob_dist)).squeeze(0)).unsqueeze(0) #propogates gradients
     
                 new_state, reward, done, _ = env.step(action) # next step
                 new_state = prepro(new_state) #preprocess the new state
                 rewards.append(reward)
                 values.append(value.squeeze(0))
                 log_probs.append(log_prob)
-                entropy_term += entropy
+                entropies.append(entropy)
                 state = new_state
     
                 if done or steps == MAX_STEPS - 1:
@@ -166,7 +156,6 @@ def a2c(env):
                     mean_rewards.append(np.mean(ep_rewards[-100:]))
                     steps_done += steps#steps_done = steps
                     print(f"Episode: {episode+1+EXTRA}, Reward: {np.sum(rewards)} | Mean reward: {mean_rewards[-1]}")
-                    #plot_durations(ep_rewards) ## PLOT TRAINING PROGRESS
                     break
     
             # Q = E [r(t+1) + GAMMA* V(s (t+1)]
@@ -179,21 +168,23 @@ def a2c(env):
             values = torch.cat(values)#torch.FloatTensor(values).to(device)
             Qvals = torch.FloatTensor(Qvals).to(device)
             log_probs = torch.stack(log_probs)
+            entropies = torch.cat(entropies)
     
             #Advantage = Q (s, a) - V (s)
-            advantage = Qvals - values.detach()
-            actor_loss = (-log_probs * advantage).mean()
-            critic_loss = F.smooth_l1_loss(Qvals, values) #0.5 * advantage.pow(2).mean()
+            advantage = Qvals - values
+            actor_loss = (-log_probs * advantage.detach()).mean()
+            critic_loss = 0.5 * advantage.pow(2).mean() #F.smooth_l1_loss(Qvals, values) #
+            entropy_loss = entropies.mean()
                 
-            ac_loss = actor_loss + critic_loss - ALPHA * entropy_term
+            ac_loss = actor_loss + critic_loss - ALPHA * entropy_loss
     
             optimizer.zero_grad()
             ac_loss.backward()
             optimizer.step()
             #plt.ioff()
             #plt.show()
-            if ((episode+1+EXTRA) % 50 == 0 & (episode+1+EXTRA) % 200 != 0):
-                plot_durations(ep_rewards) ##Show update every X episode
+            #if ((episode+1+EXTRA) % 50 == 0 & (episode+1+EXTRA) % 200 != 0):
+                #plot_durations(ep_rewards) ##Show update every X episode
             if ((episode+1+EXTRA) % 200 == 0):  ### save every X episodes #################
                 print(f"Saving Checkpoint")
                 #Save CSV of data
@@ -217,7 +208,7 @@ def a2c(env):
                 
                 #Save Image
                 rebuild1(CSV_DIR+csvname)
-                plot_durations(ep_rewards)
+                #plot_durations(ep_rewards)
 
 def calc_entropy(dist):
     entropy = 0
@@ -246,7 +237,7 @@ def rebuild1(csvfile):
     #plt.show()
  
 ## Parameters   
-BEST = 600    #Latest/Best Episode
+BEST = 6600    #Latest/Best Episode
 LOAD = True
 PLAY = False
 # Load: False + Play: False = Fresh Init Training
@@ -262,11 +253,11 @@ BESTCSV = f"{CSV_DIR}TillEp_{BEST}_data.csv"
 BESTMODEL = f"{MODEL_DIR}pong_{BEST}.pth.tar" 
 
 ## Hyper-Parameters 
-MAX_EPISODES = 5000#10000
+MAX_EPISODES = 10000#10000
 GAMMA = 0.99
 MAX_STEPS = int(2e7) #per episode
-ALPHA = 0.001
-LEARNING_RATE = 7e-4 #for adam optimiser, default 1e-3
+ALPHA = 0.01
+LEARNING_RATE = 1e-3 #7e-4 #for adam optimiser, default 1e-3
 
 
 if __name__ == "__main__":
