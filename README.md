@@ -1,4 +1,4 @@
-#Atari Pong
+# Atari Pong
 ## 50.021 Artificial Intelligence Project
 ###### Dhriti Wasan, Justinian Siah, Shruti Sriram, Clara Ho
 
