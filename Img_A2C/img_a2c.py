@@ -87,6 +87,7 @@ def a2c(env):
     steps_done = 0
 
     if LOAD:
+        # policy_net.load_state_dict(torch.load(BESTMODEL))
         checkpoint = torch.load(BESTMODEL)
         steps_done = checkpoint['steps_total'] 
         EXTRA = checkpoint['epoch']
@@ -129,9 +130,12 @@ def a2c(env):
             entropies = [] #reset entropy
             
             state = prepro(env.reset()) #preprocess the state
+            #steps_done = 0 # i want to get the total total steps completed
     
             for steps in range(MAX_STEPS):
+                #env.render() ## RENDER ##
                 value, prob_dist = model.forward(state)
+                #value = value.item() #value.detach().to('cpu').numpy()[0, 0]
                 dist = prob_dist.detach().squeeze(0).to('cpu').numpy()
     
                 #sample A ~ pi (.|S, theta)
@@ -139,6 +143,7 @@ def a2c(env):
     
                 #Calculate ln ( pi(A|S, theta), entropy = - SUM(p(x) * ln(p(x))
                 log_prob = torch.log(prob_dist.squeeze(0)[action])
+                #entropy = calc_entropy(dist)
                 entropy = -sum((prob_dist * torch.log(prob_dist)).squeeze(0)).unsqueeze(0) #propogates gradients
     
                 new_state, reward, done, _ = env.step(action) # next step
@@ -156,6 +161,7 @@ def a2c(env):
                     mean_rewards.append(np.mean(ep_rewards[-100:]))
                     steps_done += steps#steps_done = steps
                     print(f"Episode: {episode+1+EXTRA}, Reward: {np.sum(rewards)} | Mean reward: {mean_rewards[-1]}")
+                    #plot_durations(ep_rewards) ## PLOT TRAINING PROGRESS
                     break
     
             # Q = E [r(t+1) + GAMMA* V(s (t+1)]
@@ -237,7 +243,7 @@ def rebuild1(csvfile):
     #plt.show()
  
 ## Parameters   
-BEST = 7000    #Latest/Best Episode
+BEST = 7800    #Latest/Best Episode
 LOAD = True
 PLAY = False
 # Load: False + Play: False = Fresh Init Training
@@ -253,7 +259,7 @@ BESTCSV = f"{CSV_DIR}TillEp_{BEST}_data.csv"
 BESTMODEL = f"{MODEL_DIR}pong_{BEST}.pth.tar" 
 
 ## Hyper-Parameters 
-MAX_EPISODES = 10000#10000
+MAX_EPISODES = 3200#10000
 GAMMA = 0.99
 MAX_STEPS = int(2e7) #per episode
 ALPHA = 0.01
