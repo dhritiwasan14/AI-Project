@@ -1,0 +1,69 @@
+**************TRY 2**************
+__________00000 - 07000__________
+GAMMA = 0.99
+MAX_STEPS = 1500
+ALPHA = -0.001
+LEARNING_RATE = 0.001
+
+**************TRY 3**************  
+__________00000 - 11200__________
+MAX_STEPS = 2e7
+ALPHA = 0.001
+LEARNING_RATE = 7e-4
+
+**************TRY 4************** 
+>propagated critic loss (used huber)
+__________00000 - 12000__________
+GAMMA = 0.99
+MAX_STEPS = 2e7
+ALPHA = 0.001
+LEARNING_RATE = 7e-4
+
+__________05600 - 00000__________
+>reset entropy
+
+**************TRY 5**************  >Collab 1
+>propagated critic loss (used huber)
+>reset entropy every episode
+__________00000 - 13000__________
+GAMMA = 0.99
+MAX_STEPS = 2e7
+ALPHA = 0.001
+LEARNING_RATE = 1e-3
+
+**************TRY 6**************  >Local
+>propagated critic loss (used L1)
+>reset entropy every episode
+>propagate entropy
+
+__________00000 - 10000__________
+GAMMA = 0.99
+MAX_STEPS = 2e7
+ALPHA = 0.01
+LEARNING_RATE = 1e-3
+
+**************TRY 7**************  
+>propagated critic loss (used huber)
+>reset entropy every episode
+>propagate entropy
+>PongNoFrameskip-v4
+>changed NN****
+
+__________00000 - Terminated__________
+GAMMA = 0.99
+MAX_STEPS = 2e7
+ALPHA = 0.01
+LEARNING_RATE = 7e-4
+
+
+
+
+
+
+
+
+
+
+
+
+
