@@ -9,7 +9,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from lib import wrappers
+#from lib import wrappers
 
 TARGET_MEAN_REWARD = 15
 ENV_NAME = "PongNoFrameskip-v4"
